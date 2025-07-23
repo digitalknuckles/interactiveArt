@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Interactive Glitch Ripple Art</title>
+  <meta charset="UTF-8" />
+  <title>Interactive Glitch Art</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     html, body {
@@ -10,27 +10,29 @@
       padding: 0;
       overflow: hidden;
       background: black;
-      height: 100%;
-      width: 100%;
+      touch-action: none;
     }
-    #bg {
-      position: absolute;
-      top: 0;
-      left: 0;
+
+    #bg-layer {
+      position: fixed;
+      top: 0; left: 0;
       width: 100vw;
       height: 100vh;
-      object-fit: cover;
       z-index: 0;
+      background: url('https://ipfs.io/ipfs/bafybeic3zafq2i2a5bleusci3lazxpmzsuevaodsv3wbsrcs4j4p2loh4a') center center / cover no-repeat;
+      background-size: cover;
+      image-rendering: pixelated;
     }
-    canvas {
-      position: absolute;
+
+    #canvas {
+      position: fixed;
       top: 0;
       left: 0;
       z-index: 1;
       width: 100vw;
       height: 100vh;
-      touch-action: none;
     }
+
     #note {
       position: absolute;
       top: 10px;
@@ -46,9 +48,9 @@
   </style>
 </head>
 <body>
-  <img id="bg" src="https://ipfs.io/ipfs/bafybeic3zafq2i2a5bleusci3lazxpmzsuevaodsv3wbsrcs4j4p2loh4a" alt="Animated GIF Background" />
+  <div id="bg-layer"></div>
   <canvas id="canvas"></canvas>
-  <div id="note">🖱️ Touch or move your mouse to ripple/glitch the art</div>
+  <div id="note">🖱️ Move your mouse or touch to glitch + ripple</div>
 
   <script>
     const canvas = document.getElementById("canvas");
@@ -58,77 +60,71 @@
     canvas.height = window.innerHeight * dpr;
     ctx.scale(dpr, dpr);
 
-    let distortions = [];
-    let shake = { x: 0, y: 0, intensity: 0 };
+    const distortions = [];
+    let shake = 0;
 
     function addDistortion(x, y) {
-      distortions.push({ x, y, time: Date.now(), radius: 0 });
-      shake.intensity = 10; // trigger screen shake
+      distortions.push({ x, y, time: Date.now() });
+      shake = 10; // trigger screen shake
     }
 
-    function handleInput(e) {
-      if (e.touches) {
-        for (const touch of e.touches) {
-          addDistortion(touch.clientX, touch.clientY);
-        }
-      } else {
-        addDistortion(e.clientX, e.clientY);
+    canvas.addEventListener("mousemove", e => {
+      addDistortion(e.clientX, e.clientY);
+    });
+
+    canvas.addEventListener("touchmove", e => {
+      for (const touch of e.touches) {
+        addDistortion(touch.clientX, touch.clientY);
       }
-    }
+    });
 
-    canvas.addEventListener("mousemove", handleInput);
-    canvas.addEventListener("touchmove", handleInput);
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    function drawRipple(x, y, radius) {
-      const alpha = Math.max(1 - radius / 100, 0);
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, 2 * Math.PI);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
+      // Simulate background sample (blurred)
+      ctx.fillStyle = "rgba(0,0,0,0.04)";
+      ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
-    function drawDistortions() {
       const now = Date.now();
-      distortions = distortions.filter(d => now - d.time < 600);
-
       distortions.forEach(d => {
-        d.radius += 2;
+        const age = now - d.time;
+        if (age < 500) {
+          const intensity = 1 - age / 500;
 
-        // Ripple
-        drawRipple(d.x, d.y, d.radius);
+          // Glitch horizontal strip
+          const dx = (Math.random() - 0.5) * 40 * intensity;
+          const dy = (Math.random() - 0.5) * 20 * intensity;
+          ctx.fillStyle = `rgba(255,255,255,${0.03 + Math.random() * 0.1})`;
+          ctx.fillRect(d.x + dx, d.y + dy, 100 * intensity, 10);
 
-        // Pixel Glitch effect
-        for (let i = 0; i < 5; i++) {
-          const w = 40, h = 5;
-          const dx = (Math.random() - 0.5) * 20;
-          const dy = (Math.random() - 0.5) * 20;
-          ctx.drawImage(canvas, d.x, d.y, w, h, d.x + dx, d.y + dy, w, h);
+          // Ripple effect (draw concentric circles)
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, 30 * intensity, 0, 2 * Math.PI);
+          ctx.strokeStyle = `rgba(0,255,255,${0.1 * intensity})`;
+          ctx.lineWidth = 1 + 2 * intensity;
+          ctx.stroke();
         }
       });
-    }
 
-    function applyShake() {
-      if (shake.intensity > 0.5) {
-        shake.x = (Math.random() - 0.5) * shake.intensity;
-        shake.y = (Math.random() - 0.5) * shake.intensity;
-        shake.intensity *= 0.9; // decay
-      } else {
-        shake.x = shake.y = 0;
-        shake.intensity = 0;
+      // Clean old distortions
+      while (distortions.length > 0 && now - distortions[0].time > 500) {
+        distortions.shift();
       }
 
-      ctx.setTransform(1, 0, 0, 1, shake.x, shake.y);
+      // Screen shake
+      if (shake > 0) {
+        const x = (Math.random() - 0.5) * shake;
+        const y = (Math.random() - 0.5) * shake;
+        canvas.style.transform = `translate(${x}px, ${y}px)`;
+        shake *= 0.9; // decay
+      } else {
+        canvas.style.transform = "translate(0, 0)";
+      }
+
+      requestAnimationFrame(draw);
     }
 
-    function animate() {
-      ctx.clearRect(-50, -50, canvas.width, canvas.height);
-      applyShake();
-      drawDistortions();
-      requestAnimationFrame(animate);
-    }
-
-    animate();
+    draw();
   </script>
 </body>
 </html>
