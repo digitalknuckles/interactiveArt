@@ -29,7 +29,6 @@
   <label>FPS: <input id="fpsControl" type="range" min="1" max="60" value="12"></label>
 </div>
 
-<!-- Crack overlay PNG -->
 <img id="crackOverlay" src="overlay.png" style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;opacity:0;transition:opacity 0.8s ease;z-index:1;" />
 
 <script id="fragShader" type="x-shader/x-fragment">
@@ -121,9 +120,7 @@ canvas.height = window.innerHeight;
 
 const glitchSlider = document.getElementById("glitchStrength");
 const fpsSlider = document.getElementById("fpsControl");
-
 const overlay = document.getElementById("crackOverlay");
-let lastCrack = 0;
 
 function compileShader(type, src) {
   const s = gl.createShader(type);
@@ -162,23 +159,49 @@ const u_crackCenter = gl.getUniformLocation(prog, "u_crackCenter");
 let mouse = [canvas.width / 2, canvas.height / 2];
 let crackTimer = 0;
 let crackCenter = [0, 0];
-canvas.addEventListener("mousemove", e => mouse = [e.clientX, canvas.height - e.clientY]);
-canvas.addEventListener("touchmove", e => {
-  if (e.touches.length) mouse = [e.touches[0].clientX, canvas.height - e.touches[0].clientY];
-});
+let isTouching = false;
+
+function setCrackCenterFromEvent(e) {
+  let x, y;
+  if (e.touches && e.touches.length) {
+    x = e.touches[0].clientX;
+    y = e.touches[0].clientY;
+  } else {
+    x = e.clientX;
+    y = e.clientY;
+  }
+  crackCenter = [x / canvas.width, 1.0 - y / canvas.height];
+  mouse = [x, canvas.height - y]; // update mouse uniform for ripple center too
+}
+
 canvas.addEventListener("mousedown", e => {
+  isTouching = true;
+  setCrackCenterFromEvent(e);
   crackTimer = 1.0;
-  crackCenter = [e.clientX / canvas.width, 1.0 - e.clientY / canvas.height];
-  overlay.style.opacity = 1;
-  lastCrack = performance.now();
 });
 canvas.addEventListener("touchstart", e => {
-  if (e.touches.length) {
-    crackTimer = 1.0;
-    crackCenter = [e.touches[0].clientX / canvas.width, 1.0 - e.touches[0].clientY / canvas.height];
-    overlay.style.opacity = 1;
-    lastCrack = performance.now();
+  isTouching = true;
+  setCrackCenterFromEvent(e);
+  crackTimer = 1.0;
+});
+canvas.addEventListener("mousemove", e => {
+  if (isTouching) {
+    setCrackCenterFromEvent(e);
   }
+});
+canvas.addEventListener("touchmove", e => {
+  if (isTouching) {
+    setCrackCenterFromEvent(e);
+  }
+});
+window.addEventListener("mouseup", e => {
+  isTouching = false;
+});
+window.addEventListener("touchend", e => {
+  isTouching = false;
+});
+window.addEventListener("touchcancel", e => {
+  isTouching = false;
 });
 
 const texture = gl.createTexture();
@@ -201,8 +224,8 @@ let lastTime = performance.now();
 let accTime = 0;
 
 function fadeOverlay() {
-  const now = performance.now();
-  if (now - lastCrack > 1500) overlay.style.opacity = 0;
+  // Bind overlay opacity directly to crackTimer
+  overlay.style.opacity = crackTimer;
   requestAnimationFrame(fadeOverlay);
 }
 fadeOverlay();
@@ -212,6 +235,13 @@ function draw(now) {
   lastTime = now;
   accTime += dt;
 
+  if (isTouching) {
+    crackTimer = 1.0; // maintain crack effect during touch/hold
+  } else {
+    crackTimer -= dt * 0.8; // fade out on release
+    if (crackTimer < 0) crackTimer = 0;
+  }
+
   gl.viewport(0, 0, canvas.width, canvas.height);
 
   let t = accTime;
@@ -220,8 +250,6 @@ function draw(now) {
   const frameFloat = t * fps;
   const frameIdx = Math.floor(frameFloat);
   const blend = frameFloat - frameIdx;
-
-  if (crackTimer > 0) crackTimer -= dt * 0.5; // slower fade for crack effect
 
   gl.uniform1f(u_time, t);
   gl.uniform1f(u_frameIndex, frameIdx);
