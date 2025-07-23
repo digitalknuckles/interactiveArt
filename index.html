@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Interactive Glitch Art</title>
+  <meta charset="UTF-8">
+  <title>RGB Glitch Inferno</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     html, body {
@@ -24,13 +24,14 @@
       image-rendering: pixelated;
     }
 
-    #canvas {
+    canvas {
       position: fixed;
       top: 0;
       left: 0;
       z-index: 1;
       width: 100vw;
       height: 100vh;
+      mix-blend-mode: lighten;
     }
 
     #note {
@@ -50,7 +51,7 @@
 <body>
   <div id="bg-layer"></div>
   <canvas id="canvas"></canvas>
-  <div id="note">🖱️ Move your mouse or touch to glitch + ripple</div>
+  <div id="note">⚡ Drag mouse or touch screen for wild glitch effects</div>
 
   <script>
     const canvas = document.getElementById("canvas");
@@ -62,10 +63,14 @@
 
     const distortions = [];
     let shake = 0;
+    let frame = 0;
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
 
     function addDistortion(x, y) {
       distortions.push({ x, y, time: Date.now() });
-      shake = 10; // trigger screen shake
+      shake = 20; // increased shake
     }
 
     canvas.addEventListener("mousemove", e => {
@@ -78,36 +83,63 @@
       }
     });
 
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function drawRGBSplit(xOffset, yOffset) {
+      // Simulate RGB channels misalignment
+      ctx.globalCompositeOperation = "screen";
+      const strength = 5;
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = `rgba(${i==0?255:0},${i==1?255:0},${i==2?255:0},0.1)`;
+        ctx.fillRect(
+          Math.sin(frame * 0.05 + i * 2) * strength + xOffset,
+          Math.cos(frame * 0.03 + i * 2) * strength + yOffset,
+          width,
+          height
+        );
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
 
-      // Simulate background sample (blurred)
-      ctx.fillStyle = "rgba(0,0,0,0.04)";
-      ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+    function drawScanlines() {
+      const lineHeight = 2;
+      for (let y = 0; y < height; y += lineHeight * 4) {
+        const xShift = (Math.random() - 0.5) * 20;
+        ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.04})`;
+        ctx.fillRect(xShift, y, width, lineHeight);
+      }
+    }
 
+    function drawRipples() {
       const now = Date.now();
       distortions.forEach(d => {
         const age = now - d.time;
-        if (age < 500) {
-          const intensity = 1 - age / 500;
-
-          // Glitch horizontal strip
-          const dx = (Math.random() - 0.5) * 40 * intensity;
-          const dy = (Math.random() - 0.5) * 20 * intensity;
-          ctx.fillStyle = `rgba(255,255,255,${0.03 + Math.random() * 0.1})`;
-          ctx.fillRect(d.x + dx, d.y + dy, 100 * intensity, 10);
-
-          // Ripple effect (draw concentric circles)
+        if (age < 600) {
+          const alpha = 1 - age / 600;
+          const radius = age * 0.4;
           ctx.beginPath();
-          ctx.arc(d.x, d.y, 30 * intensity, 0, 2 * Math.PI);
-          ctx.strokeStyle = `rgba(0,255,255,${0.1 * intensity})`;
-          ctx.lineWidth = 1 + 2 * intensity;
+          ctx.arc(d.x, d.y, radius, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(0,255,255,${alpha * 0.3})`;
+          ctx.lineWidth = 4 * alpha;
           ctx.stroke();
         }
       });
+    }
 
-      // Clean old distortions
-      while (distortions.length > 0 && now - distortions[0].time > 500) {
+    function draw() {
+      frame++;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Trails
+      ctx.fillStyle = "rgba(0,0,0,0.06)";
+      ctx.fillRect(0, 0, width, height);
+
+      drawScanlines();
+      drawRipples();
+      drawRGBSplit(0, 0);
+
+      // Decay distortions
+      const now = Date.now();
+      while (distortions.length > 0 && now - distortions[0].time > 600) {
         distortions.shift();
       }
 
@@ -116,7 +148,7 @@
         const x = (Math.random() - 0.5) * shake;
         const y = (Math.random() - 0.5) * shake;
         canvas.style.transform = `translate(${x}px, ${y}px)`;
-        shake *= 0.9; // decay
+        shake *= 0.85;
       } else {
         canvas.style.transform = "translate(0, 0)";
       }
