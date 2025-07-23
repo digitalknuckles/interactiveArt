@@ -7,64 +7,69 @@
   <style>
     html, body { margin: 0; overflow: hidden; background: black; }
     canvas { width: 100vw; height: 100vh; display: block; }
- #toggleBtn {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  font-size: 20px;
-  padding: 5px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  z-index: 3;
-  transition: background 0.3s ease;
-}
-#toggleBtn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
 
-#ui {
-  position: fixed;
-  top: 50px;
-  left: 10px;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  font-family: sans-serif;
-  padding: 10px;
-  border-radius: 6px;
-  z-index: 2;
-  max-height: 200px;
-  overflow: hidden;
-  opacity: 1;
-  transform: translateY(0);
-  transition: all 0.3s ease;
-}
-#ui.hidden {
-  opacity: 0;
-  max-height: 0;
-  padding: 0 10px;
-  transform: translateY(-10px);
-  pointer-events: none;
-}
-    
+    #toggleBtn {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      font-size: 20px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      z-index: 3;
+      transition: transform 0.4s ease, background 0.3s ease;
+    }
+
+    #toggleBtn.open {
+      transform: rotate(180deg);
+    }
+
+    #toggleBtn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    #ui {
+      position: fixed;
+      top: 50px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      font-family: sans-serif;
+      padding: 10px;
+      border-radius: 6px;
+      z-index: 2;
+      max-height: 200px;
+      overflow: hidden;
+      opacity: 1;
+      transform: translateY(0);
+      transition: all 0.3s ease;
+    }
+
+    #ui.hidden {
+      opacity: 0;
+      max-height: 0;
+      padding: 0 10px;
+      transform: translateY(-10px);
+      pointer-events: none;
+    }
+
     label { display: block; margin-top: 5px; font-size: 13px; }
     input[type=range] { width: 150px; }
   </style>
 </head>
 <body>
-  <div id="toggleBtn">⚙️</div>
+
+<div id="toggleBtn">⚙️</div>
 <div id="ui" class="hidden">
   <label>Glitch Strength: <input id="glitchStrength" type="range" min="0" max="1" step="0.01" value="0.5"></label>
   <label>FPS: <input id="fpsControl" type="range" min="1" max="60" value="12"></label>
 </div>
-<canvas id="glitchCanvas"></canvas>
-<div id="ui">
-  <label>Glitch Strength: <input id="glitchStrength" type="range" min="0" max="1" step="0.01" value="0.5"></label>
-  <label>FPS: <input id="fpsControl" type="range" min="1" max="15" value="3"></label>
-</div>
 
-<img id="crackOverlay" src="overlay.png" style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;opacity:0;transition:opacity 0.8s ease;z-index:1;" />
+<canvas id="glitchCanvas"></canvas>
+
+<img id="crackOverlay" src="overlay.png" style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;opacity:0;transition:opacity 0.6s ease;z-index:1;" />
 
 <script id="fragShader" type="x-shader/x-fragment">
 precision mediump float;
@@ -99,7 +104,7 @@ void main() {
   vec2 uv = gl_FragCoord.xy / u_resolution.xy;
   vec2 center = u_mouse / u_resolution;
 
-  // BLOAT/BULGE EFFECT
+  // Bulge effect
   vec2 crackDiff = uv - u_crackCenter;
   float crackDist = length(crackDiff);
   float bulgeAmount = 0.15 * u_crackTime * exp(-crackDist * 10.0);
@@ -258,13 +263,13 @@ function draw(now) {
   if (isTouching) {
     crackTimer = 1.0;
   } else {
-    crackTimer -= dt * 2.5;
+    crackTimer -= dt * 2.5; // Faster fade-out
     if (crackTimer < 0) crackTimer = 0;
   }
 
   gl.viewport(0, 0, canvas.width, canvas.height);
 
-  let t = accTime;
+  const t = accTime;
   const fps = parseFloat(fpsSlider.value);
   const glitch = parseFloat(glitchSlider.value);
   const frameFloat = t * fps;
@@ -290,14 +295,17 @@ function draw(now) {
   requestAnimationFrame(draw);
 }
 requestAnimationFrame(draw);
-</script>
-  <script>
-  const toggleBtn = document.getElementById("toggleBtn");
-  const uiPanel = document.getElementById("ui");
 
-  toggleBtn.addEventListener("click", () => {
-    uiPanel.classList.toggle("hidden");
-  });
+// UI TOGGLE
+const toggleBtn = document.getElementById("toggleBtn");
+const uiPanel = document.getElementById("ui");
+
+toggleBtn.addEventListener("click", () => {
+  uiPanel.classList.toggle("hidden");
+  toggleBtn.classList.toggle("open");
+  toggleBtn.textContent = uiPanel.classList.contains("hidden") ? "⚙️" : "❌";
+});
 </script>
+
 </body>
 </html>
