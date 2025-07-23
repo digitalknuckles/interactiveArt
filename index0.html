@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Advanced Glitch Shader with Crack + Blend</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    html, body { margin: 0; overflow: hidden; background: black; }
+    canvas { width: 100vw; height: 100vh; display: block; }
+    #ui {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      font-family: sans-serif;
+      padding: 10px;
+      border-radius: 6px;
+      z-index: 2;
+    }
+    label { display: block; margin-top: 5px; font-size: 13px; }
+    input[type=range] { width: 150px; }
+  </style>
+</head>
+<body>
+<canvas id="glitchCanvas"></canvas>
+<div id="ui">
+  <label>Glitch Strength: <input id="glitchStrength" type="range" min="0" max="1" step="0.01" value="0.5"></label>
+  <label>FPS: <input id="fpsControl" type="range" min="1" max="60" value="12"></label>
+</div>
+
+<script id="fragShader" type="x-shader/x-fragment">
+precision mediump float;
+
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+uniform float u_frameIndex;
+uniform float u_nextFrameIndex;
+uniform float u_blendFactor;
+uniform float u_glitchAmount;
+uniform bool u_hasSprite;
+uniform sampler2D u_sprite;
+uniform float u_crackTime;
+uniform vec2 u_crackCenter;
+
+float rand(vec2 co) {
+  return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
+}
+
+// Fracture-like radial crack pattern
+float fracture(vec2 uv, vec2 center, float time) {
+  vec2 diff = uv - center;
+  float d = length(diff);
+  float angle = atan(diff.y, diff.x);
+  float lines = step(0.01, abs(sin(angle * 10.0 + time * 5.0)));
+  float rings = sin(60.0 * d - time * 30.0) * smoothstep(0.3, 0.0, d);
+  float crackIntensity = (lines + rings) * smoothstep(0.3, 0.0, d) * step(0.0, time);
+  return crackIntensity;
+}
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+  vec2 center = u_mouse / u_resolution;
+
+  float ripple = sin(distance(uv, center) * 40.0 - u_time * 5.0) * 0.01 * u_glitchAmount;
+  float shift = 0.005 * u_glitchAmount + ripple;
+
+  vec3 color;
+
+  if (u_hasSprite) {
+    float totalFrames = 36.0;
+    float frameW = 1.0 / totalFrames;
+    float idxA = mod(u_frameIndex, totalFrames);
+    float idxB = mod(u_nextFrameIndex, totalFrames);
+
+    vec2 uvA = uv;
+    vec2 uvB = uv;
+    uvA.x = uvA.x * frameW + idxA * frameW;
+    uvB.x = uvB.x * frameW + idxB * frameW;
+
+    vec3 colorA = vec3(
+      texture2D(u_sprite, uvA + vec2(shift, 0)).r,
+      texture2D(u_sprite, uvA).g,
+      texture2D(u_sprite, uvA - vec2(shift, 0)).b
+    );
+
+    vec3 colorB = vec3(
+      texture2D(u_sprite, uvB + vec2(shift, 0)).r,
+      texture2D(u_sprite, uvB).g,
+      texture2D(u_sprite, uvB - vec2(shift, 0)).b
+    );
+
+    color = mix(colorA, colorB, u_blendFactor);
+  } else {
+    color = vec3(
+      sin(u_time + uv.x * 10.0) * 0.5 + 0.5,
+      sin(u_time + uv.y * 20.0) * 0.5 + 0.5,
+      sin(u_time * 2.0 + uv.x * 15.0) * 0.5 + 0.5
+    );
+  }
+
+  float noise = rand(uv + u_time);
+  color += 0.05 * noise * u_glitchAmount;
+
+  float crack = fracture(uv, u_crackCenter, u_crackTime);
+  color += vec3(crack, crack * 0.2, crack * 0.1);
+
+  gl_FragColor = vec4(color, 1.0);
+}
+</script>
+
+<script>
+// Existing JS code remains unchanged
+</script>
+</body>
+</html>
