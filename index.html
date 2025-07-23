@@ -123,14 +123,10 @@ canvas.height = window.innerHeight;
 
 const glitchSlider = document.getElementById("glitchStrength");
 const fpsSlider = document.getElementById("fpsControl");
-const overlay = document.getElementById("crackOverlay");
 
 const MAX_TOUCHES = 5;
 let crackCenters = Array(MAX_TOUCHES).fill([0, 0]);
 let crackTimers = Array(MAX_TOUCHES).fill(0);
-
-//const crackCenterLoc = gl.getUniformLocation(gl.program || null, "u_crackCenters");
-//const crackTimerLoc = gl.getUniformLocation(gl.program || null, "u_crackTimers");
 
 function compileShader(type, src) {
   const s = gl.createShader(type);
@@ -172,10 +168,6 @@ let spriteLoaded = false;
 
 canvas.style.touchAction = "none";
 
-canvas.addEventListener("pointerdown", e => {
-  const touches = [...e.targetTouches || []];
-});
-
 canvas.addEventListener("pointermove", e => {
   mouse = [e.clientX, canvas.height - e.clientY];
 });
@@ -202,9 +194,11 @@ canvas.addEventListener("touchmove", e => {
 });
 
 canvas.addEventListener("touchend", e => {
-  const active = e.touches;
+  const active = Array.from(e.touches);
   for (let i = 0; i < MAX_TOUCHES; i++) {
-    if (!active[i]) crackTimers[i] = Math.max(crackTimers[i] - 0.01, 0);
+    if (!active[i]) {
+      crackTimers[i] = Math.max(crackTimers[i] - 0.01, 0);
+    }
   }
 });
 
@@ -244,6 +238,14 @@ function draw(now) {
     }
   }
 
+  const paddedCenters = crackCenters.flat();
+  while (paddedCenters.length < 10) paddedCenters.push(0);
+  gl.uniform2fv(u_crackCenters, new Float32Array(paddedCenters));
+
+  const paddedTimers = [...crackTimers];
+  while (paddedTimers.length < 5) paddedTimers.push(0);
+  gl.uniform1fv(u_crackTimers, new Float32Array(paddedTimers));
+
   gl.uniform1f(u_time, accTime);
   gl.uniform1f(u_frameIndex, frameIdx);
   gl.uniform1f(u_nextFrameIndex, frameIdx + 1);
@@ -253,9 +255,6 @@ function draw(now) {
   gl.uniform1f(u_glitchAmount, glitch);
   gl.uniform1i(u_hasSprite, spriteLoaded ? 1 : 0);
   gl.uniform1i(u_sprite, 0);
-
-  gl.uniform2fv(u_crackCenters, crackCenters.flat());
-  gl.uniform1fv(u_crackTimers, crackTimers);
 
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, texture);
