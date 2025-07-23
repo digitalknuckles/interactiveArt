@@ -29,7 +29,8 @@
   <label>FPS: <input id="fpsControl" type="range" min="1" max="60" value="12"></label>
 </div>
 
-<img id="crackOverlay" src="overlay.png" style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;opacity:0;transition:opacity 0.5s ease;z-index:1;" />
+<!-- Crack overlay PNG -->
+<img id="crackOverlay" src="overlay.png" style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;opacity:0;transition:opacity 0.8s ease;z-index:1;" />
 
 <script id="fragShader" type="x-shader/x-fragment">
 precision mediump float;
@@ -50,15 +51,15 @@ float rand(vec2 co) {
   return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
 }
 
-// Fracture-like radial crack pattern
-float fracture(vec2 uv, vec2 center, float time) {
+// Enhanced procedural fracture-like crack effect
+float crackMask(vec2 uv, vec2 center, float time) {
   vec2 diff = uv - center;
   float d = length(diff);
   float angle = atan(diff.y, diff.x);
-  float lines = step(0.01, abs(sin(angle * 10.0 + time * 5.0)));
-  float rings = sin(60.0 * d - time * 30.0) * smoothstep(0.3, 0.0, d);
-  float crackIntensity = (lines + rings) * smoothstep(0.3, 0.0, d) * step(0.0, time);
-  return crackIntensity;
+  float radial = abs(sin(angle * 40.0 + time * 4.0));
+  float rings = sin(100.0 * d - time * 25.0);
+  float mask = (radial + rings) * smoothstep(0.25, 0.0, d) * step(0.0, time);
+  return mask;
 }
 
 void main() {
@@ -105,32 +106,142 @@ void main() {
   float noise = rand(uv + u_time);
   color += 0.05 * noise * u_glitchAmount;
 
-  float crack = fracture(uv, u_crackCenter, u_crackTime);
-  color += vec3(crack, crack * 0.2, crack * 0.1);
+  float crack = crackMask(uv, u_crackCenter, u_crackTime);
+  color += vec3(crack * 1.5, crack * 0.3, crack * 0.1);
 
   gl_FragColor = vec4(color, 1.0);
 }
 </script>
 
 <script>
+const canvas = document.getElementById("glitchCanvas");
+const gl = canvas.getContext("webgl");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const glitchSlider = document.getElementById("glitchStrength");
+const fpsSlider = document.getElementById("fpsControl");
+
 const overlay = document.getElementById("crackOverlay");
 let lastCrack = 0;
 
-canvas.addEventListener("mousedown", () => {
+function compileShader(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+const vs = compileShader(gl.VERTEX_SHADER, `attribute vec4 a_position; void main() { gl_Position = a_position; }`);
+const fs = compileShader(gl.FRAGMENT_SHADER, document.getElementById("fragShader").textContent);
+const prog = gl.createProgram();
+gl.attachShader(prog, vs);
+gl.attachShader(prog, fs);
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+const posBuf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,-1, 1,1, -1,1]), gl.STATIC_DRAW);
+const posLoc = gl.getAttribLocation(prog, "a_position");
+gl.enableVertexAttribArray(posLoc);
+gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+const u_time = gl.getUniformLocation(prog, "u_time");
+const u_resolution = gl.getUniformLocation(prog, "u_resolution");
+const u_mouse = gl.getUniformLocation(prog, "u_mouse");
+const u_frameIndex = gl.getUniformLocation(prog, "u_frameIndex");
+const u_nextFrameIndex = gl.getUniformLocation(prog, "u_nextFrameIndex");
+const u_blendFactor = gl.getUniformLocation(prog, "u_blendFactor");
+const u_glitchAmount = gl.getUniformLocation(prog, "u_glitchAmount");
+const u_hasSprite = gl.getUniformLocation(prog, "u_hasSprite");
+const u_sprite = gl.getUniformLocation(prog, "u_sprite");
+const u_crackTime = gl.getUniformLocation(prog, "u_crackTime");
+const u_crackCenter = gl.getUniformLocation(prog, "u_crackCenter");
+
+let mouse = [canvas.width / 2, canvas.height / 2];
+let crackTimer = 0;
+let crackCenter = [0, 0];
+canvas.addEventListener("mousemove", e => mouse = [e.clientX, canvas.height - e.clientY]);
+canvas.addEventListener("touchmove", e => {
+  if (e.touches.length) mouse = [e.touches[0].clientX, canvas.height - e.touches[0].clientY];
+});
+canvas.addEventListener("mousedown", e => {
+  crackTimer = 1.0;
+  crackCenter = [e.clientX / canvas.width, 1.0 - e.clientY / canvas.height];
   overlay.style.opacity = 1;
   lastCrack = performance.now();
 });
-canvas.addEventListener("touchstart", () => {
-  overlay.style.opacity = 1;
-  lastCrack = performance.now();
+canvas.addEventListener("touchstart", e => {
+  if (e.touches.length) {
+    crackTimer = 1.0;
+    crackCenter = [e.touches[0].clientX / canvas.width, 1.0 - e.touches[0].clientY / canvas.height];
+    overlay.style.opacity = 1;
+    lastCrack = performance.now();
+  }
 });
+
+const texture = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, texture);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+let spriteLoaded = false;
+const img = new Image();
+img.crossOrigin = "anonymous";
+img.src = "https://ipfs.io/ipfs/bafybeif2w45idnidckunfp2yp7o6vezc4zejbgc7ylfrpxfz6qyjj4hboi";
+img.onload = () => {
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+  spriteLoaded = true;
+};
+
+let lastTime = performance.now();
+let accTime = 0;
 
 function fadeOverlay() {
   const now = performance.now();
-  if (now - lastCrack > 1000) overlay.style.opacity = 0;
+  if (now - lastCrack > 1500) overlay.style.opacity = 0;
   requestAnimationFrame(fadeOverlay);
 }
 fadeOverlay();
+
+function draw(now) {
+  let dt = (now - lastTime) / 1000;
+  lastTime = now;
+  accTime += dt;
+
+  gl.viewport(0, 0, canvas.width, canvas.height);
+
+  let t = accTime;
+  const fps = parseFloat(fpsSlider.value);
+  const glitch = parseFloat(glitchSlider.value);
+  const frameFloat = t * fps;
+  const frameIdx = Math.floor(frameFloat);
+  const blend = frameFloat - frameIdx;
+
+  if (crackTimer > 0) crackTimer -= dt * 0.5; // slower fade for crack effect
+
+  gl.uniform1f(u_time, t);
+  gl.uniform1f(u_frameIndex, frameIdx);
+  gl.uniform1f(u_nextFrameIndex, frameIdx + 1);
+  gl.uniform1f(u_blendFactor, blend);
+  gl.uniform2f(u_resolution, canvas.width, canvas.height);
+  gl.uniform2f(u_mouse, mouse[0], mouse[1]);
+  gl.uniform1f(u_glitchAmount, glitch);
+  gl.uniform1i(u_hasSprite, spriteLoaded ? 1 : 0);
+  gl.uniform1f(u_crackTime, crackTimer);
+  gl.uniform2f(u_crackCenter, crackCenter[0], crackCenter[1]);
+
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.uniform1i(u_sprite, 0);
+
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
 </script>
 </body>
 </html>
