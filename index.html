@@ -29,6 +29,8 @@
   <label>FPS: <input id="fpsControl" type="range" min="1" max="60" value="12"></label>
 </div>
 
+<img id="crackOverlay" src="overlay.png" style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;opacity:0;transition:opacity 0.5s ease;z-index:1;" />
+
 <script id="fragShader" type="x-shader/x-fragment">
 precision mediump float;
 
@@ -111,7 +113,24 @@ void main() {
 </script>
 
 <script>
-// Existing JS code remains unchanged
+const overlay = document.getElementById("crackOverlay");
+let lastCrack = 0;
+
+canvas.addEventListener("mousedown", () => {
+  overlay.style.opacity = 1;
+  lastCrack = performance.now();
+});
+canvas.addEventListener("touchstart", () => {
+  overlay.style.opacity = 1;
+  lastCrack = performance.now();
+});
+
+function fadeOverlay() {
+  const now = performance.now();
+  if (now - lastCrack > 1000) overlay.style.opacity = 0;
+  requestAnimationFrame(fadeOverlay);
+}
+fadeOverlay();
 </script>
 </body>
 </html>
