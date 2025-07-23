@@ -160,47 +160,35 @@ let mouse = [canvas.width / 2, canvas.height / 2];
 let crackTimer = 0;
 let crackCenter = [0, 0];
 let isTouching = false;
+let pointerX = canvas.width / 2;
+let pointerY = canvas.height / 2;
 
-function setCrackCenterFromEvent(e) {
-  let x, y;
-  if (e.touches && e.touches.length) {
-    x = e.touches[0].clientX;
-    y = e.touches[0].clientY;
-  } else {
-    x = e.clientX;
-    y = e.clientY;
-  }
-  crackCenter = [x / canvas.width, 1.0 - y / canvas.height];
-  mouse = [x, canvas.height - y]; // update mouse uniform for ripple center too
+function updatePointerPosition(x, y) {
+  pointerX = x;
+  pointerY = y;
+  crackCenter = [pointerX / canvas.width, 1.0 - pointerY / canvas.height];
+  mouse = [pointerX, canvas.height - pointerY]; // For ripple center
 }
 
-canvas.addEventListener("mousedown", e => {
+canvas.style.touchAction = "none"; // Disable default touch gestures
+
+canvas.addEventListener("pointerdown", e => {
   isTouching = true;
-  setCrackCenterFromEvent(e);
+  updatePointerPosition(e.clientX, e.clientY);
   crackTimer = 1.0;
 });
-canvas.addEventListener("touchstart", e => {
-  isTouching = true;
-  setCrackCenterFromEvent(e);
-  crackTimer = 1.0;
-});
-canvas.addEventListener("mousemove", e => {
+
+canvas.addEventListener("pointermove", e => {
   if (isTouching) {
-    setCrackCenterFromEvent(e);
+    updatePointerPosition(e.clientX, e.clientY);
   }
 });
-canvas.addEventListener("touchmove", e => {
-  if (isTouching) {
-    setCrackCenterFromEvent(e);
-  }
-});
-window.addEventListener("mouseup", e => {
+
+canvas.addEventListener("pointerup", e => {
   isTouching = false;
 });
-window.addEventListener("touchend", e => {
-  isTouching = false;
-});
-window.addEventListener("touchcancel", e => {
+
+canvas.addEventListener("pointercancel", e => {
   isTouching = false;
 });
 
@@ -224,7 +212,6 @@ let lastTime = performance.now();
 let accTime = 0;
 
 function fadeOverlay() {
-  // Bind overlay opacity directly to crackTimer
   overlay.style.opacity = crackTimer;
   requestAnimationFrame(fadeOverlay);
 }
@@ -236,9 +223,9 @@ function draw(now) {
   accTime += dt;
 
   if (isTouching) {
-    crackTimer = 1.0; // maintain crack effect during touch/hold
+    crackTimer = 1.0; // keep crack effect while touching
   } else {
-    crackTimer -= dt * 0.8; // fade out on release
+    crackTimer -= dt * 1.5; // fade out faster after release
     if (crackTimer < 0) crackTimer = 0;
   }
 
