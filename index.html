@@ -129,8 +129,8 @@ const MAX_TOUCHES = 5;
 let crackCenters = Array(MAX_TOUCHES).fill([0, 0]);
 let crackTimers = Array(MAX_TOUCHES).fill(0);
 
-const crackCenterLoc = gl.getUniformLocation(gl.program || null, "u_crackCenters");
-const crackTimerLoc = gl.getUniformLocation(gl.program || null, "u_crackTimers");
+//const crackCenterLoc = gl.getUniformLocation(gl.program || null, "u_crackCenters");
+//const crackTimerLoc = gl.getUniformLocation(gl.program || null, "u_crackTimers");
 
 function compileShader(type, src) {
   const s = gl.createShader(type);
