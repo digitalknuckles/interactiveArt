@@ -50,7 +50,6 @@ float rand(vec2 co) {
   return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
 }
 
-// Enhanced procedural fracture-like crack effect
 float crackMask(vec2 uv, vec2 center, float time) {
   vec2 diff = uv - center;
   float d = length(diff);
@@ -105,7 +104,7 @@ void main() {
   float noise = rand(uv + u_time);
   color += 0.05 * noise * u_glitchAmount;
 
-  float crack = crackMask(uv, u_crackCenter, u_crackTime);
+  float crack = crackMask(uv, u_crackCenter, u_crackTime) * smoothstep(0.0, 1.0, u_crackTime);
   color += vec3(crack * 1.5, crack * 0.3, crack * 0.1);
 
   gl_FragColor = vec4(color, 1.0);
@@ -167,10 +166,10 @@ function updatePointerPosition(x, y) {
   pointerX = x;
   pointerY = y;
   crackCenter = [pointerX / canvas.width, 1.0 - pointerY / canvas.height];
-  mouse = [pointerX, canvas.height - pointerY]; // For ripple center
+  mouse = [pointerX, canvas.height - pointerY];
 }
 
-canvas.style.touchAction = "none"; // Disable default touch gestures
+canvas.style.touchAction = "none";
 
 canvas.addEventListener("pointerdown", e => {
   isTouching = true;
@@ -179,18 +178,11 @@ canvas.addEventListener("pointerdown", e => {
 });
 
 canvas.addEventListener("pointermove", e => {
-  if (isTouching) {
-    updatePointerPosition(e.clientX, e.clientY);
-  }
+  if (isTouching) updatePointerPosition(e.clientX, e.clientY);
 });
 
-canvas.addEventListener("pointerup", e => {
-  isTouching = false;
-});
-
-canvas.addEventListener("pointercancel", e => {
-  isTouching = false;
-});
+canvas.addEventListener("pointerup", () => { isTouching = false; });
+canvas.addEventListener("pointercancel", () => { isTouching = false; });
 
 const texture = gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -212,7 +204,7 @@ let lastTime = performance.now();
 let accTime = 0;
 
 function fadeOverlay() {
-  overlay.style.opacity = crackTimer;
+  overlay.style.opacity = crackTimer > 0.01 ? crackTimer.toFixed(2) : 0;
   requestAnimationFrame(fadeOverlay);
 }
 fadeOverlay();
@@ -223,9 +215,9 @@ function draw(now) {
   accTime += dt;
 
   if (isTouching) {
-    crackTimer = 1.0; // keep crack effect while touching
+    crackTimer = 1.0;
   } else {
-    crackTimer -= dt * 1.5; // fade out faster after release
+    crackTimer -= dt * 1.5;
     if (crackTimer < 0) crackTimer = 0;
   }
 
