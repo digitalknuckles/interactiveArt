@@ -291,5 +291,13 @@ function draw(now) {
 }
 requestAnimationFrame(draw);
 </script>
+  <script>
+  const toggleBtn = document.getElementById("toggleBtn");
+  const uiPanel = document.getElementById("ui");
+
+  toggleBtn.addEventListener("click", () => {
+    uiPanel.classList.toggle("hidden");
+  });
+</script>
 </body>
 </html>
