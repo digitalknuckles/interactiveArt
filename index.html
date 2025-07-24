@@ -4,124 +4,78 @@
   <meta charset="UTF-8" />
   <title>"The Burnig Bridge"</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    html, body { margin: 0; overflow: hidden; background: black; }
-    canvas { width: 100vw; height: 100vh; display: block; }
-        #introOverlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: black;
-      background-image: url("https://ipfs.io/ipfs/bafybeihxuf5jtmyuvv43vrzpxowkiymr3oohqpp6t3j2pdpo6j2r3lxkiq");
-      background-size: cover;
-      background-position: center;
-      z-index: 9999;
-      opacity: 1;
-      transition: opacity 2s ease;
-    }
+<style>
+  html, body { margin: 0; overflow: hidden; background: black; }
+  canvas { width: 100vw; height: 100vh; display: block; }
 
-    #introOverlay.fade-out {
-      opacity: 0;
-      pointer-events: none;
-    }
+  #introOverlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: black;
+    background-image: url("https://ipfs.io/ipfs/bafybeihxuf5jtmyuvv43vrzpxowkiymr3oohqpp6t3j2pdpo6j2r3lxkiq");
+    background-size: cover;
+    background-position: center;
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity 2s ease;
+  }
 
-    #toggleBtn {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: rgba(0, 0, 0, 0.6);
-      color: white;
-      font-size: 20px;
-      padding: 5px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      z-index: 3;
-      transition: transform 0.4s ease, background 0.3s ease;
-    }
+  #introOverlay.fade-out {
+    opacity: 0;
+    pointer-events: none;
+  }
 
-    #toggleBtn.open { transform: rotate(180deg); }
+  #toggleBtn {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    font-size: 20px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    z-index: 3;
+    transition: transform 0.4s ease, background 0.3s ease;
+  }
 
-    #toggleBtn:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
+  #toggleBtn.open {
+    transform: rotate(180deg);
+  }
 
-    #ui {
-      position: fixed;
-      top: 50px;
-      left: 10px;
-      background: rgba(0, 0, 0, 0.85);
-      color: white;
-      font-family: sans-serif;
-      padding: 10px;
-      border-radius: 6px;
-      z-index: 2;
-      max-height: 200px;
-      overflow: hidden;
-      opacity: 1;
-      transform: translateY(0);
-      transition: all 0.3s ease;
-    }
+  #toggleBtn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
 
-    #ui.hidden {
-      opacity: 0;
-      max-height: 0;
-      padding: 0 10px;
-      transform: translateY(-10px);
-      pointer-events: none;
-    }
-    label { display: block; margin-top: 5px; font-size: 13px; }
-    input[type=range] { width: 150px; }
-    
-    #toggleBtn {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: rgba(0, 0, 0, 0.6);
-      color: white;
-      font-size: 20px;
-      padding: 5px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      z-index: 3;
-      transition: transform 0.4s ease, background 0.3s ease;
-    }
+  #ui {
+    position: fixed;
+    top: 50px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    font-family: sans-serif;
+    padding: 10px;
+    border-radius: 6px;
+    z-index: 2;
+    max-height: 200px;
+    overflow: hidden;
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.3s ease;
+  }
 
-    #toggleBtn.open {
-      transform: rotate(180deg);
-    }
+  #ui.hidden {
+    opacity: 0;
+    max-height: 0;
+    padding: 0 10px;
+    transform: translateY(-10px);
+    pointer-events: none;
+  }
 
-    #toggleBtn:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
-
-    #ui {
-      position: fixed;
-      top: 50px;
-      left: 10px;
-      background: rgba(0, 0, 0, 0.85);
-      color: white;
-      font-family: sans-serif;
-      padding: 10px;
-      border-radius: 6px;
-      z-index: 2;
-      max-height: 200px;
-      overflow: hidden;
-      opacity: 1;
-      transform: translateY(0);
-      transition: all 0.3s ease;
-    }
-
-    #ui.hidden {
-      opacity: 0;
-      max-height: 0;
-      padding: 0 10px;
-      transform: translateY(-10px);
-      pointer-events: none;
-    }
-
-    label { display: block; margin-top: 5px; font-size: 13px; }
-    input[type=range] { width: 150px; }
-  </style>
+  label { display: block; margin-top: 5px; font-size: 13px; }
+  input[type=range] { width: 150px; }
+</style>
 </head>
 <body>
 <div id="introOverlay"></div>
